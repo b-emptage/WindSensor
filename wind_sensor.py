@@ -44,27 +44,35 @@ class WindWidget:
     def __init__(self, root, sock):
         self.sock = sock
 
-        self.canvas = tk.Canvas(root, width=300, height=300, bg="#333333")
+        self.canvas = tk.Canvas(root, width=300, height=350, bg="#333333")
         self.canvas.pack()
-        self.canvas.create_text(150,20, text="N", fill="white", font=("Ariel",16))
-        self.canvas.create_text(280,150, text="E", fill="white", font=("Ariel",16))
-        self.canvas.create_text(150,280, text="S", fill="white", font=("Ariel",16))
-        self.canvas.create_text(20,150, text="W", fill="white", font=("Ariel",16))
-
-        self.label = self.canvas.create_text(15, 15,
-                                             text="0 km/h", font=("Arial", 18),
-                                             fill="white",
-                                             anchor=tk.NW)
-        self.label15av = self.canvas.create_text(15, 285,
-                                                 text="15s: 0 km/h",
-                                                 font=("Arial", 14),
-                                                 fill="white",
-                                                 anchor=tk.SW)
-        self.label60av = self.canvas.create_text(15, 265,
-                                                 text="60s: 0 km/h",
-                                                 font=("Arial", 14),
-                                                 fill="white",
-                                                 anchor=tk.SW)
+        self.canvas.create_text(150,30, text="N", fill="white", font=("Ariel",16))
+        self.canvas.create_text(270,150, text="E", fill="white", font=("Ariel",16))
+        self.canvas.create_text(150,270, text="S", fill="white", font=("Ariel",16))
+        self.canvas.create_text(30,150, text="W", fill="white", font=("Ariel",16))
+        # create a space for the speed readouts
+        self.canvas.create_rectangle(4,300,298,348, outline="#aaa")
+        self.label = self.canvas.create_text(50, 325,
+                                             text="0", font=("Arial", 16),
+                                             fill="white")
+        self.canvas.create_rectangle(30,295,70,305, outline="#333", fill="#333")
+        self.canvas.create_text(50,300, text="inst", font=("Arial",12), fill="#999")
+        # area for 15s average
+        self.label60av = self.canvas.create_text(150, 325,
+                                                 text="0",
+                                                 font=("Arial", 16),
+                                                 fill="white")
+        
+        self.canvas.create_rectangle(130,295,170,305, outline="#333", fill="#333")        
+        self.canvas.create_text(150,300, text="60s", font=("Arial",12), fill="#999")
+        # area for 60s average
+        self.labelgust = self.canvas.create_text(250, 325,
+                                                 text="0",
+                                                 font=("Arial", 16),
+                                                 fill="white")
+        
+        self.canvas.create_rectangle(230,295,270,305, outline="#333", fill="#333")
+        self.canvas.create_text(250,300, text="gust", font=("Arial",12), fill="#999")
         
         self.axes1 = self.canvas.create_line(150, 40, 150, 260, fill="#aaa",
                                             tags="overlay")
@@ -206,19 +214,22 @@ class WindWidget:
             return f"#{r:02x}{g:02x}{b:02x}"
         
         # maintain a 60s windspeed 'history'
-        if direction is not None and speed is not None and speed > 1:
+        if direction is not None and speed is not None:
             self.windspeeds.append(speed)
-            self.directions.append(direction)
+            # if windspeed is too low, then directions are close to random
+            if speed > 1:
+                self.directions.append(direction)
             
             if len(self.windspeeds) > 60:
                 self.windspeeds.popleft()  # drop oldest entry
+            if len(self.directions) > 60:
                 self.directions.popleft()
            
         if direction is not None:
             self.target_angle = math.radians(direction)
     
             speed_kph = speed * 3.6
-            self.canvas.itemconfig(self.label, text=f"{speed_kph:.1f} km/h")
+            self.canvas.itemconfig(self.label, text=f"{speed_kph:.1f}")
             # ignore this jank, basically:
                 # 0-min km/h is always 0% (max(speed, 10))
                 # min-max km/h ramps up in percentage 
@@ -235,15 +246,16 @@ class WindWidget:
             self.wind15sd = np.std(list(self.windspeeds)[-interval:])
             self.dir60av, self.dir60sd = self.circular_mean_std(list(self.directions))
             self.dir15av, self.dir15sd = self.circular_mean_std(list(self.directions)[-interval:])
+            gust = max(self.windspeeds)
             p15 = 100*((min(max(self.wind15av*3.6,minsp)-minsp,maxsp)/maxsp))
-            p60 = 100*((min(max(self.wind60av*3.6,minsp)-minsp,maxsp)/maxsp))
+            p60 = 100*((min(max(gust*3.6,minsp)-minsp,maxsp)/maxsp))
             self.c15 = var_colour(p15)
             self.c60 = var_colour(p60)
-            self.canvas.itemconfig(self.label15av,
-                                   text=f"15s: {self.wind15av*3.6:.1f} km/h",
-                                   fill=self.c15)
             self.canvas.itemconfig(self.label60av,
-                                   text=f"60s: {self.wind60av*3.6:.1f} km/h",
+                                   text=f"{self.wind60av*3.6:.1f}",
+                                   fill=self.c15)
+            self.canvas.itemconfig(self.labelgust,
+                                   text=f"{max(self.windspeeds)*3.6:.1f}",
                                    fill=self.c60)
             
         # --- Smooth angle interpolation ---
