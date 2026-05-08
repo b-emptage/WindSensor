@@ -55,6 +55,16 @@ class WindWidget:
                                              text="0 km/h", font=("Arial", 18),
                                              fill="white",
                                              anchor=tk.NW)
+        self.label15av = self.canvas.create_text(15, 285,
+                                                 text="15s: 0 km/h",
+                                                 font=("Arial", 14),
+                                                 fill="white",
+                                                 anchor=tk.SW)
+        self.label60av = self.canvas.create_text(15, 265,
+                                                 text="60s: 0 km/h",
+                                                 font=("Arial", 14),
+                                                 fill="white",
+                                                 anchor=tk.SW)
         
         self.axes1 = self.canvas.create_line(150, 40, 150, 260, fill="#aaa",
                                             tags="overlay")
@@ -86,6 +96,8 @@ class WindWidget:
         self.dir15sd = 0.0
         self.counter = 0
         self.c = None
+        self.c15 = "white"
+        self.c60 = "white"
 
         self.update()
 
@@ -178,9 +190,23 @@ class WindWidget:
             direction = direction + Noffset
         if self.c is None:
             self.c = "#99ff99"
+            
+        def var_colour(percent):
+            '''
+            Generates a variable colour based on percentage input.
+            0% = green
+            100% = red
+            Smooth-ish transition between them. Arbitrarily chosen by what I
+            think looks good
+            '''
+            r = int(25.5 * math.sqrt(percent))
+            g = int(255-2.55*percent)
+            b = 50
+            # return a hexcode colour
+            return f"#{r:02x}{g:02x}{b:02x}"
         
         # maintain a 60s windspeed 'history'
-        if direction is not None and speed is not None:
+        if direction is not None and speed is not None and speed > 1:
             self.windspeeds.append(speed)
             self.directions.append(direction)
             
@@ -198,14 +224,7 @@ class WindWidget:
                 # min-max km/h ramps up in percentage 
                 # anything over max km/h is 100% 
             percent = 100*((min(max(speed_kph,minsp)-minsp,maxsp)/maxsp))
-            # dynamically adjust the colours of the arrow based on speed
-            # first let's set up the hex colours
-            r = int(25.5 * math.sqrt(percent))
-            # Quadratic scaling r and g, but sort of inverse of eachother.
-            g = int(255-2.55*percent)#int(255 - 0.0255*percent**2)
-            b = 50  # red-green colour scale only - blue for some lightness
-            # Generate a hexcode string for the colour using fstring magic
-            self.c = f"#{r:02x}{g:02x}{b:02x}"
+            self.c = var_colour(percent)
             
             # calculate some statistics every interval seconds
             #if self.counter % interval == 0 and self.counter >= 1:
@@ -216,8 +235,17 @@ class WindWidget:
             self.wind15sd = np.std(list(self.windspeeds)[-interval:])
             self.dir60av, self.dir60sd = self.circular_mean_std(list(self.directions))
             self.dir15av, self.dir15sd = self.circular_mean_std(list(self.directions)[-interval:])
-
-    
+            p15 = 100*((min(max(self.wind15av*3.6,minsp)-minsp,maxsp)/maxsp))
+            p60 = 100*((min(max(self.wind60av*3.6,minsp)-minsp,maxsp)/maxsp))
+            self.c15 = var_colour(p15)
+            self.c60 = var_colour(p60)
+            self.canvas.itemconfig(self.label15av,
+                                   text=f"15s: {self.wind15av*3.6:.1f} km/h",
+                                   fill=self.c15)
+            self.canvas.itemconfig(self.label60av,
+                                   text=f"60s: {self.wind60av*3.6:.1f} km/h",
+                                   fill=self.c60)
+            
         # --- Smooth angle interpolation ---
         delta = self.target_angle - self.current_angle
     
@@ -234,6 +262,8 @@ class WindWidget:
         self.canvas.tag_raise(self.label)   # keep text visible
         self.canvas.after(50, self.update)  # faster refresh = smoother
         self.counter += 1
+        
+        
 
 
 # -----------------------
