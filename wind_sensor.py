@@ -44,7 +44,7 @@ class WindWidget:
     def __init__(self, root, sock):
         self.sock = sock
 
-        self.canvas = tk.Canvas(root, width=300, height=350, bg="#333333")
+        self.canvas = tk.Canvas(root, width=300, height=360, bg="#333333")
         self.canvas.pack()
         self.canvas.create_text(150,30, text="N", fill="white", font=("Ariel",16))
         self.canvas.create_text(270,150, text="E", fill="white", font=("Ariel",16))
@@ -80,6 +80,8 @@ class WindWidget:
                                             tags="overlay")
         self.circle = self.canvas.create_oval(50,50,250,250, outline="#aaa",
                                             tags="overlay")
+        self.canvas.create_rectangle(130,345,170,355, outline="#333", fill="#333")
+        self.canvas.create_text(150,350, text="km/h", font=("Arial",10), fill="#999")
         
         
         # self.label.pack()
