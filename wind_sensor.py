@@ -6,7 +6,7 @@ import numpy as np
 
 MCAST_ADDR = "239.192.0.4"
 PORT = 60004
-INTERFACE_IP = "131.217.64.26" 
+INTERFACE_IP = "0.0.0.0" 
 
 # -----------------------
 # Networking
